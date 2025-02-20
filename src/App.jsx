@@ -8,6 +8,7 @@ import Screening from './components/Screening';
 import Support from './components/Support';
 import Learning from './components/Learning';
 import Login from './components/Login';
+import './styles/fonts.css';
 
 function App() {
   return (

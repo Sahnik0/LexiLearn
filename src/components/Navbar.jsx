@@ -64,7 +64,9 @@ function Navbar() {
           
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center space-x-6">
-            <NavLink to="/#home" active={activeSection === 'home'}>Home</NavLink>
+            <NavLink to="/#home" active={activeSection === 'home'}>
+            <GraduationCap className="h-5 w-5 mr-1" />
+            Home</NavLink>
             <NavLink to="/learning" active={window.location.pathname === '/learning'}>
               <BookMarked className="h-5 w-5 mr-1" />
               Learning
