@@ -1,14 +1,21 @@
-/* src/styles/fonts.css */
 @font-face {
-    font-family: 'OpenDyslexic';
-    src: url('/font/OpenDyslexic.ttf') format('truetype');
-    /* If you have multiple font formats, you can add them like this:
-    src: 
-      url('/font/OpenDyslexic.woff2') format('woff2'),
-      url('/font/OpenDyslexic.woff') format('woff'),
-      url('/font/OpenDyslexic.ttf') format('truetype');
-    */
-    font-weight: normal;
-    font-style: normal;
-    font-display: swap;
-  }
+  font-family: 'OpenDyslexic';
+  src: url('/font/OpenDyslexic.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+.font-opendyslexic {
+  font-family: 'OpenDyslexic', sans-serif;
+}
+
+.high-contrast {
+  background-color: #000 !important;
+  color: #fff !important;
+}
+
+.high-contrast * {
+  background-color: #000 !important;
+  color: #fff !important;
+  border-color: #fff !important;
+}
