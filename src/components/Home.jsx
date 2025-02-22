@@ -162,7 +162,7 @@ function Home() {
             />
             <FeatureCard
               icon={<Users className="h-8 w-8" />}
-              title="Community Support"
+              title="Lexishift Community"
               description="Connect with others and share experiences"
               delay={400}
             />

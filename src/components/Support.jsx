@@ -24,42 +24,11 @@ function Support() {
     category: 'Education'
   });
 
-  const successStories = [
-    {
-      id: 1,
-      title: "From Struggling Reader to Published Author",
-      author: "Emma Thompson",
-      content: "I was diagnosed with dyslexia at age 8. With support and determination, I've published my first novel...",
-      likes: 45,
-      category: "Career Success",
-      date: "2024-02-15"
-    },
-    {
-      id: 2,
-      title: "Finding My Way in Medical School",
-      author: "Dr. James Wilson",
-      content: "Dyslexia didn't stop me from pursuing my dream of becoming a doctor. Here's my journey...",
-      likes: 32,
-      category: "Education",
-      date: "2024-02-10"
-    }
-  ];
 
   const handleSearch = (e) => {
     setSearchQuery(e.target.value);
   };
 
-  const filteredContent = () => {
-    return stories.filter(item => {
-      const matchesSearch = searchQuery === '' ||
-        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.author.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      const matchesFilter = filter === 'all' || item.category === filter;
-      
-      return matchesSearch && matchesFilter;
-    });
-  };
 
   useEffect(() => {
     fetchStories();
@@ -74,7 +43,8 @@ function Support() {
         id: doc.id,
         ...doc.data(),
         likes: doc.data().likes || 0,
-        likedBy: doc.data().likedBy || []
+        likedBy: doc.data().likedBy || [],
+        profilePicture: doc.data().profilePicture || null
       }));
       setStories(storiesData);
     } catch (error) {
@@ -135,13 +105,20 @@ function Support() {
 
       setIsSubmitting(true);
       try {
+        // Get the profile picture from Google account
+        const profilePicture = currentUser.photoURL 
+          ? currentUser.photoURL.replace('s96-c', 's400-c') // Get higher resolution image
+          : null;
+
         const storiesRef = collection(db, 'stories');
         await addDoc(storiesRef, {
           ...formData,
           author: currentUser.displayName || 'Anonymous',
           userId: currentUser.uid,
+          profilePicture: profilePicture,
           timestamp: serverTimestamp(),
           likes: 0,
+          likedBy: [],
           date: new Date().toISOString()
         });
 
@@ -253,40 +230,12 @@ function Support() {
         <div className="text-center mb-12">
           <h1 className="text-6xl font-bold mb-4">
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-white to-blue-400 bg-300% animate-gradient">
-              Community Support
+              Lexi Community
             </span>
           </h1>
           <p className="text-xl text-white/80">
             Connect, share, and learn from others in the dyslexia community
           </p>
-        </div>
-
-        <div className="backdrop-blur-lg bg-white/5 border border-white/10 rounded-xl p-6 mb-8">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search discussions..."
-                  onChange={handleSearch}
-                  className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:border-blue-500 text-white placeholder-white/50"
-                />
-                <Search className="absolute right-3 top-2.5 h-5 w-5 text-white/50" />
-              </div>
-            </div>
-            
-            <select
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              className="px-4 py-2 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:border-blue-500 text-white"
-            >
-              <option value="all">All Categories</option>
-              <option value="Teaching">Teaching</option>
-              <option value="Reading">Reading</option>
-              <option value="Technology">Technology</option>
-              <option value="Education">Education</option>
-            </select>
-          </div>
         </div>
 
         <div className="flex justify-center mb-8">
@@ -342,10 +291,6 @@ function Support() {
                 <div>
                   <div className="flex justify-between items-center mb-6">
                     <h2 className="text-2xl font-bold">Community Discussion</h2>
-                    <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all flex items-center gap-2">
-                      <MessageSquare className="h-5 w-5" />
-                      New Topic
-                    </button>
                   </div>
                   <DiscussionForum />
                 </div>
@@ -364,43 +309,60 @@ function Support() {
                   <div className="space-y-6">
                     {stories.map((story) => (
                       <div key={story.id} className="border border-white/10 rounded-lg p-6 hover:bg-white/5 transition-all">
-                        <h3 className="text-2xl font-semibold mb-2">{story.title}</h3>
-                        <div className="flex items-center gap-4 text-white/60 text-sm mb-4">
-                          <span className="flex items-center gap-1">
-                            <User className="h-4 w-4" />
-                            {story.author}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-4 w-4" />
-                            {new Date(story.date).toLocaleDateString()}
-                          </span>
-                          <span className="px-2 py-1 bg-white/10 rounded-full">
-                            {story.category}
-                          </span>
-                        </div>
-                        <p className="text-white/80 mb-4">{story.content}</p>
-                        <div className="flex items-center justify-between pt-4 border-t border-white/10">
-                          <button
-                            onClick={() => handleLike(story.id)}
-                            className={`flex items-center gap-2 ${
-                              story.likedBy?.includes(currentUser?.uid)
-                                ? 'text-pink-500'
-                                : 'text-white/60 hover:text-pink-500'
-                            }`}
-                          >
-                            <Heart className={`h-5 w-5 ${
-                              story.likedBy?.includes(currentUser?.uid) ? 'fill-current' : ''
-                            }`} />
-                            <span>{story.likes}</span>
-                          </button>
+                        <div className="flex items-start gap-4 mb-4">
+                          <div className="flex-shrink-0">
+                            {story.profilePicture ? (
+                              <img 
+                                src={story.profilePicture} 
+                                alt={story.author}
+                                className="w-12 h-12 rounded-full object-cover border-2 border-white/10"
+                                referrerPolicy="no-referrer"
+                              />
+                            ) : (
+                              <div className="w-12 h-12 rounded-full bg-blue-600/30 flex items-center justify-center">
+                                <User className="h-6 w-6 text-white/80" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="text-2xl font-semibold mb-2">{story.title}</h3>
+                            <div className="flex items-center gap-4 text-white/60 text-sm mb-4">
+                              <span className="flex items-center gap-1">
+                                {story.author}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Clock className="h-4 w-4" />
+                                {new Date(story.date).toLocaleDateString()}
+                              </span>
+                              <span className="px-2 py-1 bg-white/10 rounded-full">
+                                {story.category}
+                              </span>
+                            </div>
+                            <p className="text-white/80 mb-4">{story.content}</p>
+                            <div className="flex items-center justify-between pt-4 border-t border-white/10">
+                              <button
+                                onClick={() => handleLike(story.id)}
+                                className={`flex items-center gap-2 ${
+                                  story.likedBy?.includes(currentUser?.uid)
+                                    ? 'text-pink-500'
+                                    : 'text-white/60 hover:text-pink-500'
+                                }`}
+                              >
+                                <Heart className={`h-5 w-5 ${
+                                  story.likedBy?.includes(currentUser?.uid) ? 'fill-current' : ''
+                                }`} />
+                                <span>{story.likes}</span>
+                              </button>
 
-                          <button
-                            onClick={() => handleShare(story)}
-                            className="flex items-center gap-2 text-white/60 hover:text-white/80"
-                          >
-                            <Share2 className="h-5 w-5" />
-                            Share
-                          </button>
+                              <button
+                                onClick={() => handleShare(story)}
+                                className="flex items-center gap-2 text-white/60 hover:text-white/80"
+                              >
+                                <Share2 className="h-5 w-5" />
+                                Share
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     ))}
