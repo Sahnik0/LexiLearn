@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../firebase';
-import { collection, addDoc, getDocs, query, orderBy, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, orderBy, serverTimestamp, updateDoc, doc } from 'firebase/firestore';
 import { 
   MessageSquare, Users, Heart, Share2, 
   Search, Filter, ChevronRight, Clock,
-  AlertCircle, BookOpen, Star, User
+  AlertCircle, BookOpen, Star, User, Plus
 } from 'lucide-react';
 import DiscussionForum from './DiscussionForum';
 
@@ -18,6 +18,11 @@ function Support() {
   const [stories, setStories] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showStoryModal, setShowStoryModal] = useState(false);
+  const [formData, setFormData] = useState({
+    title: '',
+    content: '',
+    category: 'Education'
+  });
 
   const successStories = [
     {
@@ -57,31 +62,73 @@ function Support() {
   };
 
   useEffect(() => {
-    const fetchStories = async () => {
-      try {
-        const storiesRef = collection(db, 'stories');
-        const q = query(storiesRef, orderBy('timestamp', 'desc'));
-        const snapshot = await getDocs(q);
-        const storiesData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        setStories(storiesData);
-      } catch (error) {
-        console.error('Error fetching stories:', error);
-      }
-    };
-
     fetchStories();
   }, []);
 
-  const StoryModal = () => {
-    const [formData, setFormData] = useState({
-      title: '',
-      content: '',
-      category: 'Education'
-    });
+  const fetchStories = async () => {
+    try {
+      const storiesRef = collection(db, 'stories');
+      const q = query(storiesRef, orderBy('timestamp', 'desc'));
+      const snapshot = await getDocs(q);
+      const storiesData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        likes: doc.data().likes || 0,
+        likedBy: doc.data().likedBy || []
+      }));
+      setStories(storiesData);
+    } catch (error) {
+      console.error('Error fetching stories:', error);
+    }
+  };
 
+  const handleLike = async (storyId) => {
+    if (!currentUser) return;
+
+    try {
+      const storyRef = doc(db, 'stories', storyId);
+      const story = stories.find(s => s.id === storyId);
+      
+      if (!story) return;
+
+      const isLiked = story.likedBy.includes(currentUser.uid);
+      const newLikedBy = isLiked 
+        ? story.likedBy.filter(uid => uid !== currentUser.uid)
+        : [...story.likedBy, currentUser.uid];
+
+      await updateDoc(storyRef, {
+        likes: isLiked ? story.likes - 1 : story.likes + 1,
+        likedBy: newLikedBy
+      });
+
+      // Update local state
+      setStories(stories.map(s => 
+        s.id === storyId 
+          ? { 
+              ...s, 
+              likes: isLiked ? s.likes - 1 : s.likes + 1,
+              likedBy: newLikedBy
+            }
+          : s
+      ));
+    } catch (error) {
+      console.error('Error updating like:', error);
+    }
+  };
+
+  const handleShare = async (story) => {
+    try {
+      await navigator.share({
+        title: story.title,
+        text: `Check out this success story: ${story.title}`,
+        url: window.location.href
+      });
+    } catch (error) {
+      console.error('Error sharing:', error);
+    }
+  };
+
+  const StoryModal = () => {
     const handleSubmit = async (e) => {
       e.preventDefault();
       if (!currentUser) return;
@@ -100,13 +147,7 @@ function Support() {
 
         setShowStoryModal(false);
         setFormData({ title: '', content: '', category: 'Education' });
-        const q = query(storiesRef, orderBy('timestamp', 'desc'));
-        const snapshot = await getDocs(q);
-        const storiesData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        setStories(storiesData);
+        fetchStories();
       } catch (error) {
         console.error('Error submitting story:', error);
       } finally {
@@ -338,12 +379,25 @@ function Support() {
                           </span>
                         </div>
                         <p className="text-white/80 mb-4">{story.content}</p>
-                        <div className="flex items-center gap-4">
-                          <button className="flex items-center gap-2 text-white/60 hover:text-red-400 transition-colors">
-                            <Heart className="h-5 w-5" />
-                            {story.likes}
+                        <div className="flex items-center justify-between pt-4 border-t border-white/10">
+                          <button
+                            onClick={() => handleLike(story.id)}
+                            className={`flex items-center gap-2 ${
+                              story.likedBy?.includes(currentUser?.uid)
+                                ? 'text-pink-500'
+                                : 'text-white/60 hover:text-pink-500'
+                            }`}
+                          >
+                            <Heart className={`h-5 w-5 ${
+                              story.likedBy?.includes(currentUser?.uid) ? 'fill-current' : ''
+                            }`} />
+                            <span>{story.likes}</span>
                           </button>
-                          <button className="flex items-center gap-2 text-white/60 hover:text-blue-400 transition-colors">
+
+                          <button
+                            onClick={() => handleShare(story)}
+                            className="flex items-center gap-2 text-white/60 hover:text-white/80"
+                          >
                             <Share2 className="h-5 w-5" />
                             Share
                           </button>
