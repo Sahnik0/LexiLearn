@@ -132,6 +132,7 @@ const modules = [
     quiz: [
       {
         question: "Which words belong to the '-at' word family?",
+        audio: "/sound/at.mp3",
         options: [
           "cat, hat, mat",
           "big, dig, wig",
