@@ -85,7 +85,7 @@ function Support() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      /* Animated Background */
+
         <div className="fixed inset-0 -z-10">
           <div className="absolute inset-0 bg-gradient-to-b from-blue-900/20 via-black to-black" />
           {[...Array(10)].map((_, i) => (
