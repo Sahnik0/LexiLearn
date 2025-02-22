@@ -14,7 +14,6 @@ import {
 } from 'lucide-react';
 import '../styles/fonts.css';
 
-
 const modules = [
   {
     id: 1,
@@ -32,7 +31,7 @@ const modules = [
       
       Example Words:
      cat = k  æ   t
-      dog = d     ɒ   g
+      dog = d     o   g
       fish = f   ɪ   ʃ
       
       2. Syllable Practice
@@ -67,7 +66,7 @@ const modules = [
         question: "How many syllables are in 'butterfly'?",
         audio: "/sound/butterfly.opus",
         options: ["Two", "Three", "Four", "Five"],
-        correct: 1,
+        correct: 1, // Ensure this is the correct index for the answer
         explanation: "But-ter-fly has three distinct syllables",
         miniLesson: {
           content: "Let's practice counting syllables. Clap as you say: BUT-TER-FLY",
@@ -76,6 +75,7 @@ const modules = [
       },
       {
         question: "Which word begins with the same sound as 'fish'?",
+        audio: "/sound/fish-sound.opus", // Added audio for the question
         options: ["phone", "ship", "thin", "vine"],
         correct: 0,
         explanation: "'Fish' and 'phone' both start with the /f/ sound"
@@ -311,11 +311,11 @@ function Learning() {
   // Handle quiz submission
   const handleAnswerSubmit = async (questionIndex, answerIndex) => {
     const currentQuiz = modules[activeModule].quiz[questionIndex];
-    const isCorrect = answerIndex === currentQuiz.correct;
+    const isCorrect = answerIndex === currentQuiz.correct; // Check if the answer is correct
     
     // Play sound feedback
     if (settings.audioEnabled) {
-      playSound(isCorrect ? 'correct.mp3' : 'incorrect.mp3');
+        playSound(isCorrect ? 'correct.mp3' : 'incorrect.mp3');
     }
 
     // Get AI feedback
@@ -520,6 +520,9 @@ function Learning() {
             </div>
 
             <p className="text-xl mb-6">{modules[activeModule].quiz[currentQuestion].question}</p>
+            <button onClick={() => handleModuleAudio(modules[activeModule].quiz[currentQuestion].audio)} className="text-blue-400 hover:text-blue-300 transition-all">
+                Listen to the sound
+            </button>
 
             <div className="space-y-4 mb-6">
               {modules[activeModule].quiz[currentQuestion].options.map((option, index) => (
