@@ -1,16 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { 
   Book, Video, Download, Link as LinkIcon, Search,
   Filter, Star, ExternalLink, AlertCircle, BookOpen,
   Download as DownloadIcon, Share2, Bookmark, Eye,
   Volume2, Settings, ArrowRight, RefreshCw, CheckCircle,
   XCircle, Sparkles, ChevronRight, AlertTriangle, Info,
-  Calendar, Clock, Users, Tag
+  Calendar, Clock, Users, Tag, Plus, Edit2, Trash2, Save, X
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { database } from '../firebase';
-import { ref, set, get, update } from 'firebase/database';
+import { ref, set, get, update, remove } from 'firebase/database';
 import { debounce } from 'lodash';
+
 import '../styles/fonts.css';
 
 // Comprehensive resource data structure
@@ -164,6 +166,8 @@ const resources = {
   ]
 };
 
+
+
 function Resources() {
   const { currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState('teaching');
@@ -177,43 +181,59 @@ function Resources() {
   const [sort, setSort] = useState('rating');
   const [bookmarks, setBookmarks] = useState([]);
   const [recentlyViewed, setRecentlyViewed] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+const [loading, setLoading] = useState(false);
+const [error, setError] = useState('');
+
   const [showPreview, setShowPreview] = useState(null);
   const [userSettings, setUserSettings] = useState({
     highContrast: false,
     fontSize: 'normal',
     dyslexicFont: false
   });
+    // Notes-specific state
+    const [notes, setNotes] = useState([]);
+    const [activeNote, setActiveNote] = useState(null);
+    const [isEditing, setIsEditing] = useState(false);
   
   const searchRef = useRef(null);
   const previewRef = useRef(null);
 
+  
   useEffect(() => {
-    const loadUserData = async () => {
-      if (currentUser) {
-        try {
-          setLoading(true);
-          const userDataRef = ref(database, `users/${currentUser.uid}`);
-          const snapshot = await get(userDataRef);
+    if (!currentUser) {
+      // Redirect to login if not authenticated
+      setActiveTab('teaching');
+      return;
+    }
+
+    // Load user data including notes
+const loadUserData = async () => {
+  setLoading(true);
+  try {
+
+        const userDataRef = ref(database, `users/${currentUser.uid}`);
+        const snapshot = await get(userDataRef);
+        
+        if (snapshot.exists()) {
+          const userData = snapshot.val();
+          setBookmarks(userData.bookmarks || []);
+          setRecentlyViewed(userData.recentlyViewed || []);
+          setUserSettings(userData.settings || {
+            highContrast: false,
+            fontSize: 'normal',
+            dyslexicFont: false
+          });
           
-          if (snapshot.exists()) {
-            const userData = snapshot.val();
-            setBookmarks(userData.bookmarks || []);
-            setRecentlyViewed(userData.recentlyViewed || []);
-            setUserSettings(userData.settings || {
-              highContrast: false,
-              fontSize: 'normal',
-              dyslexicFont: false
-            });
+          // Load notes if they exist
+          if (userData.notes) {
+            setNotes(Object.values(userData.notes));
           }
-        } catch (err) {
-          setError('Failed to load user data');
-          console.error(err);
-        } finally {
-          setLoading(false);
         }
-      } else {
+      } catch (err) {
+    setError('Failed to load user data. Please try again later.');
+
+        console.error(err);
+      } finally {
         setLoading(false);
       }
     };
@@ -282,44 +302,369 @@ function Resources() {
     }
   };
 
-  const getSortedAndFilteredResources = () => {
+const getSortedAndFilteredResources = () => {
+  if (!resources || !resources[activeTab]) {
+    console.warn('Resources not found or active tab is invalid');
+    return [];
+  }
+
+  
     let filtered = resources[activeTab].filter(resource => {
       const matchesSearch = searchQuery === '' ||
         resource.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         resource.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
         resource.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
-
+  
       const matchesFilters = 
         (filters.type === 'all' || resource.type === filters.type) &&
         (filters.difficulty === 'all' || resource.difficulty === filters.difficulty) &&
         (filters.language === 'all' || resource.language === filters.language) &&
         (filters.accessibility === 'all' || 
           resource.accessibility[filters.accessibility]);
-
+  
       return matchesSearch && matchesFilters;
     });
+  
+  // Sort resources
+  filtered.sort((a, b) => {
+    switch (sort) {
+      case 'rating':
+        return b.rating - a.rating;
+      case 'downloads':
+        return b.downloads - a.downloads;
+      case 'date':
+        return new Date(b.lastUpdated) - new Date(a.lastUpdated);
+      default:
+        return 0;
+    }
+  });
 
-    // Sort resources
-    filtered.sort((a, b) => {
-      switch (sort) {
-        case 'rating':
-          return b.rating - a.rating;
-        case 'downloads':
-          return b.downloads - a.downloads;
-        case 'date':
-          return new Date(b.lastUpdated) - new Date(a.lastUpdated);
-        default:
-          return 0;
-      }
-    });
+  return filtered;
+};
 
-    return filtered;
+
+ // Enhanced notes handling functions
+ const handleCreateNote = () => {
+  const newNote = {
+    id: Date.now().toString(), // Temporary ID until saved
+    title: 'Untitled Note',
+    content: '',
+    createdAt: new Date().toISOString(),
+    lastModified: new Date().toISOString()
   };
+  setActiveNote(newNote);
+  setIsEditing(true);
+  setError(null);
+};
+
+const createNewNote = () => {
+  const newNote = {
+    id: Date.now().toString(),
+    title: 'Untitled Note',
+    content: '',
+    createdAt: new Date().toISOString(),
+    lastModified: new Date().toISOString()
+  };
+  setActiveNote(newNote);
+  setIsEditing(true);
+};
+const handleSaveNote = async () => {
+  if (!currentUser || !activeNote?.title || !activeNote?.content) {
+    setError('Please provide both title and content for the note');
+    return;
+  }
+  
+  try {
+    setLoading(true);
+    const noteId = activeNote.id;
+    const noteData = {
+      ...activeNote,
+      lastModified: new Date().toISOString()
+    };
+
+    await set(ref(database, `users/${currentUser.uid}/notes/${noteId}`), noteData);
+
+    setNotes(prev => {
+      const filtered = prev.filter(note => note.id !== noteId);
+      return [...filtered, noteData].sort((a, b) => 
+        new Date(b.lastModified) - new Date(a.lastModified)
+      );
+    });
+    
+    setIsEditing(false);
+    setError(null);
+  } catch (err) {
+    setError('Failed to save note: ' + err.message);
+    console.error('Save note error:', err);
+  } finally {
+    setLoading(false);
+  }
+};
+
+const handleUpdateNote = (field, value) => {
+  setActiveNote(prev => ({
+    ...prev,
+    [field]: value,
+    lastModified: new Date().toISOString()
+  }));
+};
+
+const handleDeleteNote = async (noteId) => {
+  if (!currentUser || !noteId) return;
+  
+  if (!window.confirm('Are you sure you want to delete this note?')) return;
+  
+  try {
+    setLoading(true);
+    await remove(ref(database, `users/${currentUser.uid}/notes/${noteId}`));
+    
+    setNotes(prev => prev.filter(note => note.id !== noteId));
+    if (activeNote?.id === noteId) {
+      setActiveNote(null);
+      setIsEditing(false);
+    }
+    setError(null);
+  } catch (err) {
+    setError('Failed to delete note: ' + err.message);
+    console.error('Delete note error:', err);
+  } finally {
+    setLoading(false);
+  }
+};
+
+const handleEditNote = (note) => {
+  setActiveNote(note);
+  setIsEditing(true);
+  setError(null);
+};
+
+const handleCancelEdit = () => {
+  if (isEditing && activeNote?.content && 
+      !window.confirm('Discard unsaved changes?')) {
+    return;
+  }
+  
+  if (!activeNote?.id) {
+    setActiveNote(null);
+  }
+  setIsEditing(false);
+  setError(null);
+};
+
+// Update the notes rendering in renderContent()
+const renderNotes = () => {
+  if (!currentUser) {
+    return (
+      <div className="text-center py-12">
+        <AlertCircle className="mx-auto h-12 w-12 text-yellow-500 mb-4" />
+        <h3 className="text-xl font-semibold mb-2">Authentication Required</h3>
+        <p className="text-white/70">Please sign in to access your notes.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Notes List */}
+      <div className="space-y-4">
+        <button
+          onClick={handleCreateNote}
+          className="w-full px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition-all flex items-center gap-2 justify-center mb-4"
+          disabled={loading}
+        >
+          <Plus className="h-5 w-5" /> New Note
+        </button>
+        
+        {loading && !activeNote ? (
+          <div className="animate-pulse space-y-4">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="bg-white/5 h-32 rounded-xl"></div>
+            ))}
+          </div>
+        ) : notes.length === 0 ? (
+          <div className="text-center py-8 text-white/70">
+            <BookOpen className="mx-auto h-12 w-12 mb-2" />
+            <p>No notes yet. Create your first note!</p>
+          </div>
+        ) : (
+          notes.map(note => (
+            <div
+              key={note.id}
+              className={`bg-white/5 backdrop-blur-lg border border-white/10 rounded-xl p-6 cursor-pointer transition-all hover:bg-white/10 ${
+                activeNote?.id === note.id ? 'ring-2 ring-blue-500' : ''
+              }`}
+              onClick={() => setActiveNote(note)}
+            >
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="text-xl font-semibold">{note.title}</h3>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEditNote(note);
+                    }}
+                    className="p-1 hover:text-blue-400"
+                    disabled={loading}
+                  >
+                    <Edit2 className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteNote(note.id);
+                    }}
+                    className="p-1 hover:text-red-400"
+                    disabled={loading}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+              <p className="text-white/70 line-clamp-2">{note.content}</p>
+              <div className="flex items-center gap-4 mt-4 text-sm text-white/50">
+                <div className="flex items-center gap-1">
+                  <Calendar className="h-4 w-4" />
+                  {new Date(note.createdAt).toLocaleDateString()}
+                </div>
+                <div className="flex items-center gap-1">
+                  <Clock className="h-4 w-4" />
+                  {new Date(note.lastModified).toLocaleTimeString()}
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Note Editor */}
+      {(activeNote || isEditing) && (
+        <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-xl p-6">
+          <div className="flex justify-between items-center mb-6">
+            <input
+              type="text"
+              value={activeNote?.title || ''}
+              onChange={(e) => handleUpdateNote('title', e.target.value)}
+              placeholder="Note Title"
+              className="text-2xl font-bold bg-transparent border-none focus:outline-none placeholder-white/30 w-full"
+              readOnly={!isEditing}
+            />
+            <div className="flex items-center gap-2">
+              {isEditing ? (
+                <>
+                  <button
+                    onClick={handleSaveNote}
+                    className="p-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition-all"
+                    disabled={loading}
+                  >
+                    {loading ? <RefreshCw className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />}
+                  </button>
+                  <button
+                    onClick={handleCancelEdit}
+                    className="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-all"
+                    disabled={loading}
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => handleEditNote(activeNote)}
+                  className="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-all"
+                  disabled={loading}
+                >
+                  <Edit2 className="h-5 w-5" />
+                </button>
+              )}
+            </div>
+          </div>
+          
+          <textarea
+            value={activeNote?.content || ''}
+            onChange={(e) => handleUpdateNote('content', e.target.value)}
+            placeholder="Write your note here..."
+            className="w-full h-[500px] bg-white/5 rounded-lg p-4 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-white/30"
+            readOnly={!isEditing}
+          />
+
+          {error && (
+            <div className="mt-4 p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5" />
+              {error}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+  // Main render content
+const renderContent = () => {
+  console.log('Rendering content for active tab:', activeTab);
+  if (activeTab === 'notes') {
+
+  if (activeTab === 'notes') {
+    return renderNotes();
+  }
+
+
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {loading ? (
+          [...Array(6)].map((_, i) => (
+            <div key={i} className="animate-pulse">
+              <div className="bg-white/5 rounded-xl h-64"></div>
+            </div>
+          ))
+        ) : error ? (
+          <div className="col-span-full text-center py-12">
+            <AlertCircle className="mx-auto h-12 w-12 text-red-500 mb-4" />
+            <p className="text-red-400">{error}</p>
+          </div>
+        ) : (
+          getSortedAndFilteredResources().map((resource) => (
+            <ResourceCard
+              key={resource.id}
+              resource={resource}
+              isBookmarked={bookmarks.includes(resource.id)}
+              onBookmark={() => toggleBookmark(resource.id)}
+              onView={() => {
+                addToRecentlyViewed(resource.id);
+                setShowPreview(resource);
+              }}
+              settings={userSettings}
+            />
+          ))
+        )}
+      </div>
+    );
+  };
+
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {getSortedAndFilteredResources().map((resource) => (
+          <ResourceCard
+            key={resource.id}
+            resource={resource}
+            isBookmarked={bookmarks.includes(resource.id)}
+            onBookmark={() => toggleBookmark(resource.id)}
+            onView={() => {
+              addToRecentlyViewed(resource.id);
+              setShowPreview(resource);
+            }}
+            settings={userSettings}
+          />
+        ))}
+      </div>
+    );
+  };
+
 
   return (
     <div className={`min-h-screen bg-black text-white ${
       userSettings.dyslexicFont ? 'font-opendyslexic' : ''
     } ${userSettings.highContrast ? 'high-contrast' : ''}`}>
+      <div className="fixed inset-0 -z-10">
 
         <div className="fixed inset-0 -z-10">
           <div className="absolute inset-0 bg-gradient-to-b from-blue-900/20 via-black to-black" />
@@ -338,22 +683,24 @@ function Resources() {
             />
           ))}
         </div>
+        </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 relative">
           {/* Header */}
           <div className="text-center mb-12">
-            <h1 className="text-6xl font-bold mb-4">
-          <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-white to-blue-400 bg-300% animate-gradient">
-            Learning Resources
-          </span>
-            </h1>
-            <p className="text-xl text-white/80">
-          Discover our comprehensive collection of dyslexia support materials
-            </p>
-          </div>
+          <h1 className="text-6xl font-bold mb-4">
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-white to-blue-400 bg-300% animate-gradient">
+              Learning Resources
+            </span>
+          </h1>
+          <p className="text-xl text-white/80">
+            Discover our comprehensive collection of dyslexia support materials
+          </p>
+        </div>
 
           {/* Search and Filters */}
-        <div className="backdrop-blur-lg bg-white/5 border border-white/10 rounded-xl p-6 mb-8">
+          {activeTab !== 'notes' && (
+          <div className="backdrop-blur-lg bg-white/5 border border-white/10 rounded-xl p-6 mb-8">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
@@ -404,10 +751,11 @@ function Resources() {
             </div>
           </div>
         </div>
-        {/* Resource Categories */}
+
+          )}
         <div className="flex justify-center mb-8">
           <div className="bg-white/10 backdrop-blur-lg rounded-lg p-1">
-            {['teaching', 'tools', 'parents'].map((tab) => (
+            {['teaching', 'tools', 'parents', 'notes'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -423,35 +771,10 @@ function Resources() {
           </div>
         </div>
 
-        {/* Resource Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {loading ? (
-            [...Array(6)].map((_, i) => (
-              <div key={i} className="animate-pulse">
-                <div className="bg-white/5 rounded-xl h-64"></div>
-              </div>
-            ))
-          ) : error ? (
-            <div className="col-span-full text-center py-12">
-              <AlertCircle className="mx-auto h-12 w-12 text-red-500 mb-4" />
-              <p className="text-red-400">{error}</p>
-            </div>
-          ) : (
-            getSortedAndFilteredResources().map((resource) => (
-              <ResourceCard
-                key={resource.id}
-                resource={resource}
-                isBookmarked={bookmarks.includes(resource.id)}
-                onBookmark={() => toggleBookmark(resource.id)}
-                onView={() => {
-                  addToRecentlyViewed(resource.id);
-                  setShowPreview(resource);
-                }}
-                settings={userSettings}
-              />
-            ))
-          )}
-        </div>
+        {/* Main Content */}
+        {renderContent()}
+
+
 
         {/* Resource Preview Modal */}
         {showPreview && (
@@ -514,6 +837,7 @@ function Resources() {
         </button>
       </div>
     </div>
+    
   );
 }
 
