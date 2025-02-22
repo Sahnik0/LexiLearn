@@ -16,6 +16,9 @@ import '../styles/fonts.css';
 
 // Comprehensive resource data structure
 const resources = {
+  speechToTextVisible: false,
+  textToSpeechVisible: false,
+
   teaching: [
     {
       id: 't1',
@@ -92,6 +95,52 @@ const resources = {
         keyboard: true
       }
     },
+    {
+      id: 'tl3',
+      title: "Text-to-Speech Tool",
+      description: "Tool for converting text into spoken words using advanced speech synthesis.",
+      type: "software",
+      platform: ["web"],
+      difficulty: "beginner",
+      language: "multiple",
+      tags: ["software", "text-to-speech"],
+      rating: 4.5,
+      downloads: 1200,
+      lastUpdated: "2024-02-20",
+      url: "#",
+      trial: true,
+      requirements: ["account"],
+      accessibility: {
+        screenReader: true,
+        textToSpeech: true,
+        keyboard: true
+      },
+      onClick: () => setTextToSpeechVisible(true) // Add click handler
+    },
+    {
+      id: 'tl4',
+      title: "Speech-to-Text Tool",
+      description: "Tool for converting spoken language into text using advanced speech recognition.",
+      type: "software",
+      platform: ["web"],
+      difficulty: "beginner",
+      language: "multiple",
+      tags: ["software", "speech-to-text"],
+      rating: 4.6,
+      downloads: 800,
+      lastUpdated: "2024-02-22",
+      url: "#",
+      trial: true,
+      requirements: ["account"],
+      accessibility: {
+        screenReader: true,
+        textToSpeech: true,
+        keyboard: true
+      },
+      onClick: () => setSpeechToTextVisible(true) // Add click handler
+    },
+
+
     {
       id: 'tl2',
       title: "Visual Learning Suite",
@@ -180,9 +229,11 @@ function Resources() {
   const [sort, setSort] = useState('rating');
   const [bookmarks, setBookmarks] = useState([]);
   const [recentlyViewed, setRecentlyViewed] = useState([]);
-const [loading, setLoading] = useState(false);
-const [error, setError] = useState('');
-
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  // Add these state variables
+  const [speechToTextVisible, setSpeechToTextVisible] = useState(false);
+  const [textToSpeechVisible, setTextToSpeechVisible] = useState(false);
   const [showPreview, setShowPreview] = useState(null);
   const [userSettings, setUserSettings] = useState({
     highContrast: false,
@@ -301,7 +352,13 @@ const loadUserData = async () => {
     }
   };
 
+const speakText = (text) => {
+  const speech = new SpeechSynthesisUtterance(text);
+  window.speechSynthesis.speak(speech);
+};
+
 const getSortedAndFilteredResources = () => {
+
   if (!resources || !resources[activeTab]) {
     console.warn('Resources not found or active tab is invalid');
     return [];
@@ -339,6 +396,15 @@ const getSortedAndFilteredResources = () => {
   });
 
   return filtered;
+};
+
+const renderTextToSpeechButton = (resource) => {
+  return (
+    <button onClick={() => speakText(resource.description)} className="text-blue-500 hover:text-blue-400">
+      Read Aloud
+    </button>
+  );
+
 };
 
 
@@ -598,14 +664,10 @@ const renderNotes = () => {
 };
 
   // Main render content
-const renderContent = () => {
-  console.log('Rendering content for active tab:', activeTab);
-  if (activeTab === 'notes') {
-
-  if (activeTab === 'notes') {
-    return renderNotes();
-  }
-
+  const renderContent = () => {
+    if (activeTab === 'notes') {
+      return renderNotes();
+    }
 
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -622,71 +684,51 @@ const renderContent = () => {
           </div>
         ) : (
           getSortedAndFilteredResources().map((resource) => (
-            <ResourceCard
-              key={resource.id}
-              resource={resource}
-              isBookmarked={bookmarks.includes(resource.id)}
-              onBookmark={() => toggleBookmark(resource.id)}
-              onView={() => {
-                addToRecentlyViewed(resource.id);
-                setShowPreview(resource);
-              }}
-              settings={userSettings}
-            />
+            <div key={resource.id}>
+              {renderTextToSpeechButton(resource)}
+              <ResourceCard
+                resource={resource}
+                isBookmarked={bookmarks.includes(resource.id)}
+                onBookmark={() => toggleBookmark(resource.id)}
+                onView={() => {
+                  addToRecentlyViewed(resource.id);
+                  setShowPreview(resource);
+                }}
+                settings={userSettings}
+              />
+            </div>
           ))
         )}
       </div>
     );
   };
 
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {getSortedAndFilteredResources().map((resource) => (
-          <ResourceCard
-            key={resource.id}
-            resource={resource}
-            isBookmarked={bookmarks.includes(resource.id)}
-            onBookmark={() => toggleBookmark(resource.id)}
-            onView={() => {
-              addToRecentlyViewed(resource.id);
-              setShowPreview(resource);
-            }}
-            settings={userSettings}
-          />
-        ))}
-      </div>
-    );
-  };
-
-
+  // Main component return
   return (
     <div className={`min-h-screen bg-black text-white ${
       userSettings.dyslexicFont ? 'font-opendyslexic' : ''
     } ${userSettings.highContrast ? 'high-contrast' : ''}`}>
       <div className="fixed inset-0 -z-10">
+        <div className="absolute inset-0 bg-gradient-to-b from-blue-900/20 via-black to-black" />
+        {[...Array(15)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute rounded-full bg-blue-400/10 blur-xl animate-float"
+            style={{
+              width: `${Math.random() * 200 + 100}px`,
+              height: `${Math.random() * 200 + 100}px`,
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animationDuration: `${Math.random() * 7 + 10}s`,
+              animationDelay: `${Math.random() * 5}s`
+            }}
+          />
+        ))}
+      </div>
 
-        <div className="fixed inset-0 -z-10">
-          <div className="absolute inset-0 bg-gradient-to-b from-blue-900/20 via-black to-black" />
-          {[...Array(15)].map((_, i) => (
-            <div
-          key={i}
-          className="absolute rounded-full bg-blue-400/10 blur-xl animate-float"
-          style={{
-            width: `${Math.random() * 200 + 100}px`,
-            height: `${Math.random() * 200 + 100}px`,
-            left: `${Math.random() * 100}%`,
-            top: `${Math.random() * 100}%`,
-            animationDuration: `${Math.random() * 7 + 10}s`,
-            animationDelay: `${Math.random() * 5}s`
-          }}
-            />
-          ))}
-        </div>
-        </div>
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 relative">
-          {/* Header */}
-          <div className="text-center mb-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 relative">
+        {/* Header */}
+        <div className="text-center mb-12">
           <h1 className="text-6xl font-bold mb-4">
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-white to-blue-400 bg-300% animate-gradient">
               Learning Resources
@@ -827,8 +869,7 @@ const renderContent = () => {
           </div>
         )}
 
-        {/* Settings Panel */}
-        <button
+<button
           onClick={() => setShowSettings(true)}
           className="fixed bottom-6 right-6 p-3 bg-white/10 rounded-full hover:bg-white/20"
         >
@@ -836,7 +877,6 @@ const renderContent = () => {
         </button>
       </div>
     </div>
-    
   );
 }
 
