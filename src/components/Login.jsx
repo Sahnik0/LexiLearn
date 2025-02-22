@@ -1,17 +1,30 @@
+import { useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { LogIn } from 'lucide-react';
 
 function Login() {
-  const { signInWithGoogle } = useAuth();
+  const { currentUser, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Redirect if there's a specified return path, otherwise go to home
+  const from = location.state?.from?.pathname || '/';
+
+  useEffect(() => {
+    // If user is already logged in, redirect them
+    if (currentUser) {
+      navigate(from, { replace: true });
+    }
+  }, [currentUser, navigate, from]);
 
   const handleGoogleSignIn = async () => {
     try {
       await signInWithGoogle();
-      navigate('/');
+      navigate(from, { replace: true });
     } catch (error) {
       console.error("Failed to sign in", error);
+      // You might want to show an error message to the user here
     }
   };
 
@@ -55,8 +68,11 @@ function Login() {
                 Welcome to LexiLearn
               </span>
             </h1>
-            <p className="text-xl text-white/80">
-              Sign in to access all features
+            <p className="text-xl text-white/80 mb-4">
+              Your journey to better learning starts here
+            </p>
+            <p className="text-md text-white/60">
+              Please sign in to access all features and personalized content
             </p>
           </div>
 
@@ -72,13 +88,18 @@ function Login() {
 
             {/* Additional Info */}
             <div className="mt-6 text-center text-white/60">
-              <p>By signing in, you agree to our Terms of Service and Privacy Policy</p>
+              <p className="text-sm">
+                By signing in, you agree to our{' '}
+                <a href="/terms" className="text-blue-400 hover:text-blue-300">Terms of Service</a>
+                {' '}and{' '}
+                <a href="/privacy" className="text-blue-400 hover:text-blue-300">Privacy Policy</a>
+              </p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Add the keyframe animations */}
+      {/* Animations */}
       <style jsx>{`
         @keyframes float-x {
           0%, 100% { transform: translateX(0px); }

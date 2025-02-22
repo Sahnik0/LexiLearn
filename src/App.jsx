@@ -12,6 +12,7 @@ import Screening from './components/Screening';
 import Support from './components/Support';
 import Learning from './components/Learning';
 import Login from './components/Login';
+import ProtectedRoute from './components/ProtectedRoute';
 import './styles/fonts.css';
 
 function App() {
@@ -26,13 +27,33 @@ function App() {
                 <div className="min-h-screen bg-gray-50">
                   <Navbar />
                   <Routes>
-                    <Route path="/" element={<Home />} />
-                    <Route path="/about" element={<About />} />
-                    <Route path="/resources" element={<Resources />} />
-                    <Route path="/screening" element={<Screening />} />
-                    <Route path="/support" element={<Support />} />
-                    <Route path="/learning" element={<Learning />} />
                     <Route path="/login" element={<Login />} />
+                    <Route path="/" element={
+                      <ProtectedRoute>
+                        <Home />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/about" element={<About />} />
+                    <Route path="/resources" element={
+                      <ProtectedRoute>
+                        <Resources />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/screening" element={
+                      <ProtectedRoute>
+                        <Screening />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/support" element={
+                      <ProtectedRoute>
+                        <Support />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/learning" element={
+                      <ProtectedRoute>
+                        <Learning />
+                      </ProtectedRoute>
+                    } />
                   </Routes>
                 </div>
               </Router>
