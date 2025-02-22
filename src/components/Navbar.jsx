@@ -7,6 +7,9 @@ function Navbar() {
   const { currentUser, logout } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
 
+  if (location.pathname === '/support') {
+    return null;
+  }
   const handleLogout = async () => {
     try {
       await logout();
@@ -72,10 +75,6 @@ function Navbar() {
             <NavLink to="/screening" onClick={() => setIsOpen(false)}>
               <ScreenShare className="h-5 w-5 mr-3" />
               Screening
-            </NavLink>
-            <NavLink to="/support" onClick={() => setIsOpen(false)}>
-              <HeartHandshake className="h-5 w-5 mr-3" />
-              Support
             </NavLink>
           </div>
 
