@@ -4,6 +4,7 @@ import { getAuth } from 'firebase/auth';
 import { getDatabase } from "firebase/database";
 import { getAnalytics } from "firebase/analytics";
 
+// Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyDRARA4VT8q_GMCRgbd6Kg2mwoSIevJqaI",
   authDomain: "lexilearnsank.firebaseapp.com",
