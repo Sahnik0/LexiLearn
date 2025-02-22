@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { database } from '../firebase';
-import { ref, set, get, update } from 'firebase/database';
+import { db } from '../firebase';
+import { collection, addDoc, getDocs, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import { 
   MessageSquare, Users, Heart, Share2, 
   Search, Filter, ChevronRight, Clock,
@@ -14,6 +14,9 @@ function Support() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(false);
+  const [stories, setStories] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showStoryModal, setShowStoryModal] = useState(false);
 
   const forumTopics = [
     {
@@ -81,6 +84,138 @@ function Support() {
       
       return matchesSearch && matchesFilter;
     });
+  };
+
+  useEffect(() => {
+    const fetchStories = async () => {
+      try {
+        const storiesRef = collection(db, 'stories');
+        const q = query(storiesRef, orderBy('timestamp', 'desc'));
+        const snapshot = await getDocs(q);
+        const storiesData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setStories(storiesData);
+      } catch (error) {
+        console.error('Error fetching stories:', error);
+      }
+    };
+
+    fetchStories();
+  }, []);
+
+  const StoryModal = () => {
+    const [formData, setFormData] = useState({
+      title: '',
+      content: '',
+      category: 'Education'
+    });
+
+    const handleSubmit = async (e) => {
+      e.preventDefault();
+      if (!currentUser) return;
+
+      setIsSubmitting(true);
+      try {
+        const storiesRef = collection(db, 'stories');
+        await addDoc(storiesRef, {
+          ...formData,
+          author: currentUser.displayName || 'Anonymous',
+          userId: currentUser.uid,
+          timestamp: serverTimestamp(),
+          likes: 0,
+          date: new Date().toISOString()
+        });
+
+        setShowStoryModal(false);
+        setFormData({ title: '', content: '', category: 'Education' });
+        const q = query(storiesRef, orderBy('timestamp', 'desc'));
+        const snapshot = await getDocs(q);
+        const storiesData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setStories(storiesData);
+      } catch (error) {
+        console.error('Error submitting story:', error);
+      } finally {
+        setIsSubmitting(false);
+      }
+    };
+
+    const handleInputChange = (e) => {
+      const { name, value } = e.target;
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+        <div className="bg-gray-900 rounded-xl p-6 max-w-2xl w-full mx-4">
+          <h2 className="text-2xl font-bold mb-4">Share Your Success Story</h2>
+          <form onSubmit={handleSubmit}>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Title</label>
+                <input
+                  type="text"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  required
+                  placeholder="Enter your story title"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Category</label>
+                <select
+                  name="category"
+                  value={formData.category}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="Education">Education</option>
+                  <option value="Career Success">Career Success</option>
+                  <option value="Personal Growth">Personal Growth</option>
+                  <option value="Learning Strategies">Learning Strategies</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Your Story</label>
+                <textarea
+                  name="content"
+                  value={formData.content}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg h-40 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  required
+                  placeholder="Share your success story here..."
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-4 mt-6">
+              <button
+                type="button"
+                onClick={() => setShowStoryModal(false)}
+                className="px-4 py-2 text-white/70 hover:text-white"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all disabled:opacity-50"
+              >
+                {isSubmitting ? 'Submitting...' : 'Share Story'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -242,13 +377,16 @@ function Support() {
                 <div>
                   <div className="flex justify-between items-center mb-6">
                     <h2 className="text-2xl font-bold">Success Stories</h2>
-                    <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all flex items-center gap-2">
+                    <button 
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all flex items-center gap-2"
+                      onClick={() => setShowStoryModal(true)}
+                    >
                       <Star className="h-5 w-5" />
                       Share Your Story
                     </button>
                   </div>
                   <div className="space-y-6">
-                    {filteredContent().map((story) => (
+                    {stories.map((story) => (
                       <div key={story.id} className="border border-white/10 rounded-lg p-6 hover:bg-white/5 transition-all">
                         <h3 className="text-2xl font-semibold mb-2">{story.title}</h3>
                         <div className="flex items-center gap-4 text-white/60 text-sm mb-4">
@@ -284,6 +422,7 @@ function Support() {
           )}
         </div>
       </div>
+      {showStoryModal && <StoryModal />}
     </div>
   );
 }
