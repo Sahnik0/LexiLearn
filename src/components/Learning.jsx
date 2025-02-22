@@ -75,7 +75,7 @@ const modules = [
       },
       {
         question: "Which word begins with the same sound as 'fish'?",
-        audio: "/sound/fish-sound.opus", // Added audio for the question
+        audio: "/sound/fish.mp3", // Added audio for the question
         options: ["phone", "ship", "thin", "vine"],
         correct: 0,
         explanation: "'Fish' and 'phone' both start with the /f/ sound"
