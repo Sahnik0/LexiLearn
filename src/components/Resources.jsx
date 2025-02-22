@@ -12,7 +12,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { database } from '../firebase';
 import { ref, set, get, update, remove } from 'firebase/database';
 import { debounce } from 'lodash';
-
 import '../styles/fonts.css';
 
 // Comprehensive resource data structure
