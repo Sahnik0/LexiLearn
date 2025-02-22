@@ -55,7 +55,7 @@ function Home() {
                       transition: "transform 0.3s ease-out",
                     }}
                   >
-                    Understanding
+                    Empowering
                   </span>
                   <span
                     className="block mt-2"
@@ -64,7 +64,7 @@ function Home() {
                       transition: "transform 0.3s ease-out",
                     }}
                   >
-                    Dyslexia
+                    Learning
                     <Sparkles className="inline-block ml-4 h-8 w-8 text-blue-400 animate-pulse" />
                   </span>
                   <span
@@ -74,7 +74,7 @@ function Home() {
                       transition: "transform 0.3s ease-out",
                     }}
                   >
-                    Together
+                    For All
                   </span>
                 </h1>
                 <div className="absolute -top-10 -left-10 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl animate-pulse" />
