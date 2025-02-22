@@ -315,7 +315,7 @@ function Learning() {
     
     // Play sound feedback
     if (settings.audioEnabled) {
-        playSound(isCorrect ? 'correct.mp3' : 'incorrect.mp3');
+        playSound(isCorrect ? '/sound/correct.mp3' : '/sound/incorrect.mp3');
     }
 
     // Get AI feedback
