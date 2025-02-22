@@ -178,7 +178,34 @@ function Screening() {
     loadPreviousResults();
   }, [currentUser]);
 
-  // Update the calculateRisk function
+  const handleAnswer = async (value) => {
+    const newAnswers = { ...answers, [currentStep]: value };
+    setAnswers(newAnswers);
+
+    if (currentStep < questions.length - 1) {
+      setCurrentStep(currentStep + 1);
+    } else {
+      setLoading(true);
+      try {
+        const result = {
+          answers: newAnswers,
+          timestamp: new Date().toISOString(),
+          riskLevel: calculateRisk(newAnswers)
+        };
+        
+        if (currentUser) {
+          await set(ref(database, `screenings/${currentUser.uid}/latest`), result);
+        }
+        
+        setIsComplete(true);  // Set completion state
+      } catch (error) {
+        console.error("Error saving results:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
   const calculateRisk = (answers) => {
     const maxPossibleScore = questions.reduce((acc, q) => acc + q.weight, 0);
     const score = questions.reduce((acc, q, index) => {
@@ -191,67 +218,13 @@ function Screening() {
     if (percentage >= 70) riskLevel = "High";
     else if (percentage >= 40) riskLevel = "Moderate";
     else riskLevel = "Low";
-  
-    // Calculate category scores
-    const categoryScores = questions.reduce((acc, q, index) => {
-      if (!acc[q.category]) {
-        acc[q.category] = {
-          total: 0,
-          score: 0,
-          count: 0
-        };
-      }
-      acc[q.category].total += q.weight;
-      acc[q.category].count += 1;
-      if (answers[index] === true) {
-        acc[q.category].score += q.weight;
-      }
-      return acc;
-    }, {});
-  
+
     return {
       percentage,
-      riskLevel,
-      categoryScores: Object.entries(categoryScores).map(([category, data]) => ({
-        category,
-        score: Math.round((data.score / data.total) * 100)
-      }))
+      riskLevel
     };
   };
 
-  // Update the handleAnswer function to save the correct format
-  const handleAnswer = async (value) => {
-    const newAnswers = { ...answers, [currentStep]: value };
-    setAnswers(newAnswers);
-  
-    if (currentStep < questions.length - 1) {
-      setCurrentStep(currentStep + 1);
-    } else {
-      setLoading(true);
-      try {
-        const riskAssessment = calculateRisk(newAnswers);
-        const result = {
-          answers: newAnswers,
-          timestamp: new Date().toISOString(),
-          percentage: riskAssessment.percentage,
-          riskLevel: riskAssessment.riskLevel,
-          categoryScores: riskAssessment.categoryScores
-        };
-        
-        if (currentUser) {
-          await set(ref(database, `screenings/${currentUser.uid}/latest`), result);
-        }
-        
-        setIsComplete(true);
-      } catch (error) {
-        console.error("Error saving results:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
-  };
-
-  // Update the renderResults function to properly display the risk assessment
   const renderResults = () => {
     const riskAssessment = calculateRisk(answers);
     
@@ -261,39 +234,65 @@ function Screening() {
           {loading ? (
             <RefreshCw className="h-16 w-16 text-blue-400 mx-auto mb-4 animate-spin" />
           ) : (
-            <>
-              <ClipboardCheck className="h-16 w-16 text-blue-400 mx-auto mb-4" />
-              <h2 className="text-3xl font-bold mb-4">Screening Complete</h2>
-              <div className="mb-8">
-                <p className="text-xl mb-2">
-                  Risk Assessment: {' '}
-                  <span className={`font-semibold ${
-                    riskAssessment.riskLevel === 'High' ? 'text-red-400' :
-                    riskAssessment.riskLevel === 'Moderate' ? 'text-yellow-400' :
-                    'text-green-400'
-                  }`}>
-                    {riskAssessment.riskLevel} ({riskAssessment.percentage}%)
-                  </span>
-                </p>
-                
-                {/* Category Breakdown */}
-                <div className="grid grid-cols-2 gap-4 mt-6">
-                  {riskAssessment.categoryScores.map(({ category, score }) => (
-                    <div key={category} className="bg-white/5 p-4 rounded-lg">
-                      <h4 className="font-semibold mb-2">{category}</h4>
-                      <div className="relative h-2 bg-white/10 rounded-full overflow-hidden">
-                        <div
-                          className="absolute h-full bg-blue-500"
-                          style={{ width: `${score}%` }}
-                        />
-                      </div>
-                      <p className="text-sm mt-1">{score}%</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              {/* ... rest of your existing renderResults JSX ... */}
-            </>
+            <ClipboardCheck className="h-16 w-16 text-blue-400 mx-auto mb-4" />
+          )}
+          <h2 className="text-3xl font-bold mb-4">Screening Complete</h2>
+          <div className="mb-8">
+            <p className="text-xl mb-2">
+              Risk Assessment: {' '}
+              <span className={`font-semibold ${
+                riskAssessment.riskLevel === 'High' ? 'text-red-400' :
+                riskAssessment.riskLevel === 'Moderate' ? 'text-yellow-400' :
+                'text-green-400'
+              }`}>
+                {riskAssessment.riskLevel} ({riskAssessment.percentage}%)
+              </span>
+            </p>
+            <p className="text-white/80">
+              Based on your responses, there are indicators suggesting a {riskAssessment.riskLevel.toLowerCase()} risk of dyslexia.
+            </p>
+          </div>
+
+          <div className="bg-white/5 border border-white/10 rounded-lg p-6 mb-8">
+            <h3 className="font-semibold mb-4 flex items-center gap-2">
+              <ArrowRight className="h-5 w-5 text-blue-400" />
+              Recommended Next Steps
+            </h3>
+            <ul className="text-left text-white/80 space-y-3">
+              <li className="flex items-center gap-2">
+                <ChevronRight className="h-4 w-4 text-blue-400" />
+                Consult with an educational psychologist or learning specialist
+              </li>
+              <li className="flex items-center gap-2">
+                <ChevronRight className="h-4 w-4 text-blue-400" />
+                Share these results with teachers or education professionals
+              </li>
+              <li className="flex items-center gap-2">
+                <ChevronRight className="h-4 w-4 text-blue-400" />
+                Explore our resources section for support materials
+              </li>
+            </ul>
+          </div>
+
+          {!currentUser && (
+            <div className="bg-blue-900/30 border border-blue-500/30 rounded-lg p-4">
+              <AlertCircle className="h-6 w-6 text-blue-400 mx-auto mb-2" />
+              <p className="text-white/80">
+                Create an account to save your results and access personalized resources
+              </p>
+            </div>
+          )}
+
+          {previousResults && (
+            <div className="mt-8 p-4 border-t border-white/10">
+              <h3 className="text-lg font-semibold mb-2">Previous Screening</h3>
+              <p className="text-white/60">
+                Last completed: {new Date(previousResults.timestamp).toLocaleDateString()}
+              </p>
+              <p className="text-white/60">
+                Previous risk level: {previousResults.riskLevel.riskLevel} ({previousResults.riskLevel.percentage}%)
+              </p>
+            </div>
           )}
         </div>
       </div>
