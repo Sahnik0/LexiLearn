@@ -7,6 +7,7 @@ import {
   Search, Filter, ChevronRight, Clock,
   AlertCircle, BookOpen, Star, User
 } from 'lucide-react';
+import DiscussionForum from './DiscussionForum';
 
 function Support() {
   const { currentUser } = useAuth();
@@ -17,36 +18,6 @@ function Support() {
   const [stories, setStories] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showStoryModal, setShowStoryModal] = useState(false);
-
-  const forumTopics = [
-    {
-      id: 1,
-      title: "Teaching Strategies for Math",
-      author: "Sarah K.",
-      replies: 15,
-      lastActive: "2 hours ago",
-      category: "Teaching",
-      tags: ["mathematics", "strategies", "education"]
-    },
-    {
-      id: 2,
-      title: "Building Reading Confidence",
-      author: "Michael R.",
-      replies: 23,
-      lastActive: "1 day ago",
-      category: "Reading",
-      tags: ["confidence", "reading", "motivation"]
-    },
-    {
-      id: 3,
-      title: "Technology Tools Discussion",
-      author: "David L.",
-      replies: 8,
-      lastActive: "3 hours ago",
-      category: "Technology",
-      tags: ["tools", "software", "assistive-tech"]
-    }
-  ];
 
   const successStories = [
     {
@@ -74,8 +45,7 @@ function Support() {
   };
 
   const filteredContent = () => {
-    const content = activeTab === 'forum' ? forumTopics : successStories;
-    return content.filter(item => {
+    return stories.filter(item => {
       const matchesSearch = searchQuery === '' ||
         item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.author.toLowerCase().includes(searchQuery.toLowerCase());
@@ -219,39 +189,37 @@ function Support() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-gray-900 text-white py-20">
+      <div className="fixed inset-0 -z-10">
+        <div className="absolute inset-0 bg-gradient-to-b from-blue-900/20 via-black to-black" />
+        {[...Array(10)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute rounded-full bg-blue-400/10 blur-xl animate-float"
+            style={{
+              width: `${Math.random() * 200 + 100}px`,
+              height: `${Math.random() * 200 + 100}px`,
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animationDuration: `${Math.random() * 7 + 10}s`,
+              animationDelay: `${Math.random() * 5}s`
+            }}
+          />
+        ))}
+      </div>
 
-        <div className="fixed inset-0 -z-10">
-          <div className="absolute inset-0 bg-gradient-to-b from-blue-900/20 via-black to-black" />
-          {[...Array(10)].map((_, i) => (
-            <div
-          key={i}
-          className="absolute rounded-full bg-blue-400/10 blur-xl animate-float"
-          style={{
-            width: `${Math.random() * 200 + 100}px`,
-            height: `${Math.random() * 200 + 100}px`,
-            left: `${Math.random() * 100}%`,
-            top: `${Math.random() * 100}%`,
-            animationDuration: `${Math.random() * 7 + 10}s`,
-            animationDelay: `${Math.random() * 5}s`
-          }}
-            />
-          ))}
+      <div className="container mx-auto px-4">
+        <div className="text-center mb-12">
+          <h1 className="text-6xl font-bold mb-4">
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-white to-blue-400 bg-300% animate-gradient">
+              Community Support
+            </span>
+          </h1>
+          <p className="text-xl text-white/80">
+            Connect, share, and learn from others in the dyslexia community
+          </p>
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
-          <div className="text-center mb-12">
-            <h1 className="text-6xl font-bold mb-4">
-          <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-white to-blue-400 bg-300% animate-gradient">
-            Community Support
-          </span>
-            </h1>
-            <p className="text-xl text-white/80">
-          Connect, share, and learn from others in the dyslexia community
-            </p>
-          </div>
-
-          {/* Search and Filters */}
         <div className="backdrop-blur-lg bg-white/5 border border-white/10 rounded-xl p-6 mb-8">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
@@ -280,7 +248,6 @@ function Support() {
           </div>
         </div>
 
-        {/* Navigation Tabs */}
         <div className="flex justify-center mb-8">
           <div className="bg-white/5 backdrop-blur-lg rounded-lg p-1">
             <button
@@ -312,7 +279,6 @@ function Support() {
           </div>
         </div>
 
-        {/* Content Area */}
         <div className="backdrop-blur-lg bg-white/5 border border-white/10 rounded-xl p-6">
           {!currentUser ? (
             <div className="text-center py-12">
@@ -334,44 +300,13 @@ function Support() {
               {activeTab === 'forum' ? (
                 <div>
                   <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-2xl font-bold">Recent Discussions</h2>
+                    <h2 className="text-2xl font-bold">Community Discussion</h2>
                     <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all flex items-center gap-2">
                       <MessageSquare className="h-5 w-5" />
                       New Topic
                     </button>
                   </div>
-                  <div className="space-y-4">
-                    {filteredContent().map((topic) => (
-                      <div key={topic.id} className="border border-white/10 rounded-lg p-6 hover:bg-white/5 transition-all">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h3 className="text-xl font-semibold mb-2">{topic.title}</h3>
-                            <div className="flex items-center gap-4 text-white/60 text-sm">
-                              <span className="flex items-center gap-1">
-                                <User className="h-4 w-4" />
-                                {topic.author}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Clock className="h-4 w-4" />
-                                {topic.lastActive}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <MessageSquare className="h-4 w-4" />
-                                {topic.replies} replies
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex gap-2">
-                            {topic.tags.map((tag) => (
-                              <span key={tag} className="px-2 py-1 bg-white/10 rounded-full text-sm text-white/70">
-                                {tag}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  <DiscussionForum />
                 </div>
               ) : (
                 <div>
@@ -422,6 +357,7 @@ function Support() {
           )}
         </div>
       </div>
+
       {showStoryModal && <StoryModal />}
     </div>
   );

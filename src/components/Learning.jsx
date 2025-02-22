@@ -13,6 +13,7 @@ import {
   Settings, Book, AlertCircle
 } from 'lucide-react';
 import '../styles/fonts.css';
+import DiscussionForum from './DiscussionForum';
 
 
 const modules = [
@@ -596,6 +597,18 @@ function Learning() {
         <div role="status" aria-live="polite" className="sr-only">
           {announcement}
         </div>
+
+        {/* Community Discussion */}
+        <section className="py-12">
+          <div className="container mx-auto px-4">
+            <h2 className="text-3xl font-bold text-center mb-8">Community Discussion</h2>
+            <p className="text-center text-white/70 mb-12 max-w-2xl mx-auto">
+              Join our supportive community to share experiences, ask questions, and connect with others. 
+              Together, we can learn and grow stronger.
+            </p>
+            <DiscussionForum />
+          </div>
+        </section>
       </div>
     </div>
   );
