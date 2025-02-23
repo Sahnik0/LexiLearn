@@ -98,48 +98,48 @@ function Support() {
     }
   };
 
-  const StoryModal = () => {
+  const handleModalClose = () => {
+    setShowStoryModal(false);
+  };
+
+  const handleStorySuccess = async () => {
+    await fetchStories();
+    setShowStoryModal(false);
+  };
+
+  const StoryModal = ({ onClose, currentUser, onSuccess }) => {
+    const [formData, setFormData] = useState({
+      title: '',
+      content: '',
+      category: 'Education'
+    });
+    const [isSubmitting, setIsSubmitting] = useState(false);
+  
     const handleSubmit = async (e) => {
       e.preventDefault();
       if (!currentUser) return;
-
+  
       setIsSubmitting(true);
       try {
-        // Get the profile picture from Google account
-        const profilePicture = currentUser.photoURL 
-          ? currentUser.photoURL.replace('s96-c', 's400-c') // Get higher resolution image
-          : null;
-
         const storiesRef = collection(db, 'stories');
         await addDoc(storiesRef, {
           ...formData,
           author: currentUser.displayName || 'Anonymous',
           userId: currentUser.uid,
-          profilePicture: profilePicture,
+          profilePicture: currentUser.photoURL,
           timestamp: serverTimestamp(),
           likes: 0,
           likedBy: [],
           date: new Date().toISOString()
         });
-
-        setShowStoryModal(false);
-        setFormData({ title: '', content: '', category: 'Education' });
-        fetchStories();
+        onSuccess();
       } catch (error) {
         console.error('Error submitting story:', error);
       } finally {
         setIsSubmitting(false);
       }
     };
-
-    const handleInputChange = (e) => {
-      const { name, value } = e.target;
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
-    };
-
+  
     return (
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
         <div className="bg-gray-900 rounded-xl p-6 max-w-2xl w-full mx-4">
@@ -147,23 +147,24 @@ function Support() {
           <form onSubmit={handleSubmit}>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Title</label>
+                <label htmlFor="title" className="block text-sm font-medium mb-1">Title</label>
                 <input
+                  id="title"
                   type="text"
-                  name="title"
                   value={formData.title}
-                  onChange={handleInputChange}
+                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
                   className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   required
                   placeholder="Enter your story title"
                 />
               </div>
+  
               <div>
-                <label className="block text-sm font-medium mb-1">Category</label>
+                <label htmlFor="category" className="block text-sm font-medium mb-1">Category</label>
                 <select
-                  name="category"
+                  id="category"
                   value={formData.category}
-                  onChange={handleInputChange}
+                  onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
                   className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 >
                   <option value="Education">Education</option>
@@ -172,22 +173,24 @@ function Support() {
                   <option value="Learning Strategies">Learning Strategies</option>
                 </select>
               </div>
+  
               <div>
-                <label className="block text-sm font-medium mb-1">Your Story</label>
+                <label htmlFor="content" className="block text-sm font-medium mb-1">Your Story</label>
                 <textarea
-                  name="content"
+                  id="content"
                   value={formData.content}
-                  onChange={handleInputChange}
+                  onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
                   className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg h-40 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   required
                   placeholder="Share your success story here..."
                 />
               </div>
             </div>
+  
             <div className="flex justify-end gap-4 mt-6">
               <button
                 type="button"
-                onClick={() => setShowStoryModal(false)}
+                onClick={onClose}
                 className="px-4 py-2 text-white/70 hover:text-white"
               >
                 Cancel
@@ -374,7 +377,13 @@ function Support() {
         </div>
       </div>
 
-      {showStoryModal && <StoryModal />}
+      {showStoryModal && (
+        <StoryModal 
+          onClose={handleModalClose}
+          currentUser={currentUser}
+          onSuccess={handleStorySuccess}
+        />
+      )}
     </div>
   );
 }
