@@ -147,6 +147,13 @@ const DiscussionForum = () => {
         photoURL: currentUser.photoURL || null,
         topicId: currentTopic.id
       });
+
+      // Update message count in the topic document
+      const topicRef = doc(db, 'discussion_topics', currentTopic.id);
+      await updateDoc(topicRef, {
+        messageCount: (messages.length + 1)
+      });
+
       setNewMessage('');
     } catch (error) {
       console.error('Error sending message:', error);
@@ -169,7 +176,7 @@ const DiscussionForum = () => {
       case 'recent':
         return [...topics].sort((a, b) => b.lastActivity?.toMillis() - a.lastActivity?.toMillis());
       case 'popular':
-        return [...topics].sort((a, b) => b.messageCount - a.messageCount);
+        return [...topics].sort((a, b) => (topicMembers[b.id] || 0) - (topicMembers[a.id] || 0));
       default:
         return topics;
     }
