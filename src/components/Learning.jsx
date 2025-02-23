@@ -13,7 +13,7 @@ import {
   Settings, Book, AlertCircle
 } from 'lucide-react';
 import '../styles/fonts.css';
-
+import PracticeExercises from './PracticeExercises';
 const modules = [
   {
     id: 1,
@@ -289,6 +289,7 @@ function Learning() {
   const [questionResults, setQuestionResults] = useState([]);
   const [isQuizComplete, setIsQuizComplete] = useState(false);
   const [moduleProgress, setModuleProgress] = useState({});
+  const [showPractice, setShowPractice] = useState(false);
   const contentRef = useRef(null);
   useEffect(() => {
     // Load existing progress for the current module
@@ -572,6 +573,28 @@ function Learning() {
         </button>
       ))}
     </div>
+
+          {/* Add Practice Section Here - This is the new addition */}
+          {modules[activeModule].practice && !showQuiz && (
+          <div className="mb-8">
+            <button
+              onClick={() => setShowPractice(!showPractice)}
+              className="flex items-center gap-2 px-6 py-3 bg-blue-600 rounded-lg hover:bg-blue-700 transition-all mx-auto mb-4"
+            >
+              <Brain className="h-5 w-5" />
+              {showPractice ? 'Hide Practice' : 'Start Practice'}
+            </button>
+
+            {showPractice && (
+              <PracticeExercises
+                practice={modules[activeModule].practice}
+                settings={settings}
+                playSound={playSound}
+                generateFeedback={generateFeedback}
+              />
+            )}
+          </div>
+        )}
 
         {/* Active Module Content */}
         <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-xl p-6 mb-8">
